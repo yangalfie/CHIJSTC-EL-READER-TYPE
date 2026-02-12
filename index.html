@@ -32,7 +32,7 @@
             <p class="text-slate-400 mt-2">Drag and drop or click to browse</p>
         </div>
 
-        <!-- Dashboard State (Hidden by default) -->
+        <!-- Dashboard State -->
         <div id="dashboard" class="hidden space-y-6 animate-in fade-in duration-500">
             <!-- User Bar -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -60,9 +60,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div id="persona-card" class="lg:col-span-2 rounded-[2rem] p-8 border border-slate-200 shadow-xl relative overflow-hidden">
                     <div class="relative z-10 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
-                        <div id="persona-icon-container" class="p-5 bg-white rounded-3xl shadow-lg ring-8 ring-white/50">
-                            <!-- Icon injected here -->
-                        </div>
+                        <div id="persona-icon-container" class="p-5 bg-white rounded-3xl shadow-lg ring-8 ring-white/50"></div>
                         <div>
                             <span class="bg-white/50 px-3 py-1 rounded-full text-indigo-600 font-black uppercase tracking-widest text-[10px]">Your Archetype</span>
                             <h2 id="persona-title" class="text-3xl font-black text-slate-900 mt-2 mb-3">Archetype Name</h2>
@@ -79,28 +77,32 @@
                 </div>
             </div>
 
-            <!-- Book Shelf -->
+            <!-- Book Shelf with Numbers -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-                    <div class="flex items-center gap-2 mb-4">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Currently Reading</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">In Progress</h3>
+                        </div>
+                        <span id="count-current" class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full">0</span>
                     </div>
                     <div id="shelf-current" class="flex flex-wrap gap-2 text-sm"></div>
                 </div>
                 <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-                    <div class="flex items-center gap-2 mb-4">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Completed Books</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Completed</h3>
+                        </div>
+                        <span id="count-completed" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full">0</span>
                     </div>
                     <div id="shelf-completed" class="flex flex-wrap gap-2 text-sm"></div>
                 </div>
             </div>
 
             <!-- Stats Grid -->
-            <div id="stats-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <!-- Stats cards injected here -->
-            </div>
+            <div id="stats-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
             <!-- Table -->
             <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
@@ -154,8 +156,6 @@
 
         let currentData = null;
 
-        // --- Core Logic ---
-
         function processData(rawData) {
             const logs = Array.isArray(rawData) ? rawData : (rawData.logs || []);
             const profile = rawData.profile || { name: 'Reader', grade: 'N/A' };
@@ -187,7 +187,6 @@
                 genreCounts[g] = (genreCounts[g] || 0) + 1;
             });
 
-            // Persona Selection
             let persona = ARCHETYPES.THE_SPRINTER;
             if (typeCounts.audiobook > logs.length / 3) persona = ARCHETYPES.THE_AUDIO_EXPLORER;
             else if ((genreCounts.graphic || 0) + (genreCounts.manga || 0) > logs.length / 2) persona = ARCHETYPES.THE_VISUAL_STORYTELLER;
@@ -206,37 +205,35 @@
             document.getElementById('upload-container').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
 
-            // Profile
             document.getElementById('display-name').textContent = data.profile.name || 'Reader';
             document.getElementById('display-grade').textContent = `Grade ${data.profile.grade || 'N/A'}`;
 
-            // Persona
             const card = document.getElementById('persona-card');
             card.className = `lg:col-span-2 rounded-[2rem] p-8 border border-slate-200 shadow-xl relative overflow-hidden ${data.persona.color}`;
             document.getElementById('persona-icon-container').innerHTML = data.persona.icon;
             document.getElementById('persona-title').textContent = data.persona.title;
             document.getElementById('persona-description').textContent = data.persona.description;
 
-            // Stats
             const stats = [
                 { label: 'Time Spent', val: `${data.stats.totalMinutes}m` },
                 { label: 'Pages Read', val: data.stats.totalPages },
                 { label: 'Completed', val: data.stats.completedCount },
                 { label: 'Avg Session', val: `${data.stats.avgDuration}m` }
             ];
-            const statsGrid = document.getElementById('stats-grid');
-            statsGrid.innerHTML = stats.map(s => `
+            document.getElementById('stats-grid').innerHTML = stats.map(s => `
                 <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                     <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">${s.label}</span>
                     <p class="text-3xl font-black text-slate-800">${s.val}</p>
                 </div>
             `).join('');
 
-            // Shelf
+            // Updated Shelf with Counts
+            document.getElementById('count-current').textContent = data.incomplete.length;
+            document.getElementById('count-completed').textContent = data.completed.length;
+
             document.getElementById('shelf-current').innerHTML = data.incomplete.length ? data.incomplete.map(t => `<span class="px-3 py-1.5 bg-amber-50/50 border border-amber-100 rounded-xl font-bold text-amber-700">📖 ${t}</span>`).join('') : '<p class="text-slate-400 italic">None</p>';
             document.getElementById('shelf-completed').innerHTML = data.completed.length ? data.completed.map(t => `<span class="px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl font-bold text-emerald-700">✅ ${t}</span>`).join('') : '<p class="text-slate-400 italic">None</p>';
 
-            // Table
             document.getElementById('history-body').innerHTML = data.logs.map(l => `
                 <tr class="hover:bg-slate-50">
                     <td class="px-8 py-5 text-sm font-medium text-slate-400">${l.date}</td>
@@ -256,104 +253,58 @@
             const ctx = canvas.getContext('2d');
             const entries = Object.entries(genreData);
             const total = entries.reduce((a, b) => a + b[1], 0);
-            
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             let start = -0.5 * Math.PI;
             const legend = document.getElementById('genre-legend');
             legend.innerHTML = '';
-
             entries.forEach(([label, val], i) => {
                 const angle = (val / total) * 2 * Math.PI;
                 const color = COLORS[i % COLORS.length];
-                
                 ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.moveTo(90, 90);
-                ctx.arc(90, 90, 80, start, start + angle);
-                ctx.fill();
-                
+                ctx.beginPath(); ctx.moveTo(90, 90); ctx.arc(90, 90, 80, start, start + angle); ctx.fill();
                 legend.innerHTML += `
                     <div class="flex items-center gap-1.5 overflow-hidden">
                         <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${color}"></div>
                         <span class="text-[10px] font-bold text-slate-700 truncate">${label}</span>
                         <span class="text-[9px] text-slate-400">${Math.round((val/total)*100)}%</span>
-                    </div>
-                `;
-                
+                    </div>`;
                 start += angle;
             });
-
-            // Hole
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(90, 90, 45, 0, 2 * Math.PI);
-            ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(90, 90, 45, 0, 2 * Math.PI); ctx.fill();
         }
-
-        // --- Screenshot Logic ---
 
         function generateSnapshot() {
             if (!currentData) return;
             const data = currentData;
-            
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            const w = 1200;
-            const h = 1450;
-            canvas.width = w;
-            canvas.height = h;
+            const w = 1200, h = 1450;
+            canvas.width = w; canvas.height = h;
 
-            // Background
-            ctx.fillStyle = '#f8fafc';
-            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, w, h);
 
-            // Helper for rounded rects
             const rRect = (x, y, width, height, radius, fill) => {
-                ctx.fillStyle = fill;
-                ctx.beginPath();
-                ctx.moveTo(x + radius, y);
-                ctx.lineTo(x + width - radius, y);
-                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-                ctx.lineTo(x + width, y + height - radius);
-                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-                ctx.lineTo(x + radius, y + height);
-                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
-                ctx.closePath();
-                ctx.fill();
+                ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, width, height, radius); ctx.fill();
             };
 
-            // Profile Header
             rRect(50, 50, 1100, 120, 30, '#ffffff');
-            ctx.fillStyle = '#0f172a';
-            ctx.font = 'bold 40px sans-serif';
-            ctx.fillText(data.profile.name || 'Reader', 100, 125);
-            ctx.fillStyle = '#6366f1';
-            ctx.font = 'bold 20px sans-serif';
-            ctx.fillText(`${data.profile.readingLevel || 'Active'} Reader • Grade ${data.profile.grade || 'N/A'}`, 100, 155);
+            ctx.fillStyle = '#0f172a'; ctx.font = 'bold 40px sans-serif'; ctx.fillText(data.profile.name || 'Reader', 100, 125);
+            ctx.fillStyle = '#6366f1'; ctx.font = 'bold 20px sans-serif'; ctx.fillText(`${data.profile.readingLevel || 'Active'} Reader • Grade ${data.profile.grade || 'N/A'}`, 100, 155);
 
-            // Archetype Card
             rRect(50, 190, 1100, 320, 40, data.persona.hex + '15');
-            ctx.fillStyle = '#0f172a';
-            ctx.font = 'bold 55px sans-serif';
-            ctx.fillText(data.persona.title, 100, 300);
-            ctx.fillStyle = '#475569';
-            ctx.font = '28px sans-serif';
-            const wrapText = (text, maxWidth) => {
+            ctx.fillStyle = '#0f172a'; ctx.font = 'bold 55px sans-serif'; ctx.fillText(data.persona.title, 100, 300);
+            ctx.fillStyle = '#475569'; ctx.font = '28px sans-serif';
+            const wrapText = (text) => {
                 const words = text.split(' ');
-                const lines = [];
-                let currentLine = words[0];
+                const lines = []; let curr = words[0];
                 for (let i = 1; i < words.length; i++) {
-                    if (currentLine.length + words[i].length < 60) currentLine += " " + words[i];
-                    else { lines.push(currentLine); currentLine = words[i]; }
+                    if (curr.length + words[i].length < 60) curr += " " + words[i];
+                    else { lines.push(curr); curr = words[i]; }
                 }
-                lines.push(currentLine);
-                return lines;
+                lines.push(curr); return lines;
             };
             wrapText(data.persona.description).forEach((l, i) => ctx.fillText(l, 100, 360 + (i * 45)));
 
-            // Stats
             const statsArr = [
                 { l: 'MINUTES', v: `${data.stats.totalMinutes}m` },
                 { l: 'PAGES', v: data.stats.totalPages },
@@ -367,17 +318,14 @@
                 ctx.fillStyle = '#0f172a'; ctx.font = 'bold 45px sans-serif'; ctx.fillText(s.v, x + 30, 635);
             });
 
-            // Genre Pie
             rRect(50, 690, 1100, 240, 40, '#ffffff');
             ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('GENRE PROFILE', 100, 740);
-            
             const entries = Object.entries(data.genreCounts);
             const total = entries.reduce((a, b) => a + b[1], 0);
             let start = -0.5 * Math.PI;
             entries.forEach(([label, val], i) => {
                 const angle = (val / total) * 2 * Math.PI;
-                const color = COLORS[i % COLORS.length];
-                ctx.fillStyle = color;
+                ctx.fillStyle = COLORS[i % COLORS.length];
                 ctx.beginPath(); ctx.moveTo(200, 820); ctx.arc(200, 820, 60, start, start + angle); ctx.fill();
                 ctx.fillRect(320 + (Math.floor(i/3)*250), 770 + ((i%3)*35), 15, 15);
                 ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.fillText(label, 345 + (Math.floor(i/3)*250), 783 + ((i%3)*35));
@@ -385,20 +333,18 @@
             });
             ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(200, 820, 30, 0, 2*Math.PI); ctx.fill();
 
-            // Shelf
-            const drawList = (title, list, x, y, color) => {
+            const drawList = (title, count, list, x, y, color) => {
                 rRect(x, y, 540, 400, 40, '#ffffff');
-                ctx.fillStyle = color; ctx.font = 'bold 18px sans-serif'; ctx.fillText(title, x + 40, y + 50);
+                ctx.fillStyle = color; ctx.font = 'bold 18px sans-serif'; ctx.fillText(`${title} (${count})`, x + 40, y + 50);
                 ctx.fillStyle = '#475569'; ctx.font = 'bold 18px sans-serif';
                 if (list.length) {
                     list.slice(0, 8).forEach((t, i) => ctx.fillText(`• ${t}`, x + 40, y + 100 + (i * 35)));
                     if (list.length > 8) ctx.fillText(`+ ${list.length - 8} more...`, x + 40, y + 375);
                 } else ctx.fillText('None recorded', x + 40, y + 100);
             };
-            drawList('CURRENTLY READING', data.incomplete, 50, 950, '#f59e0b');
-            drawList('BOOKS FINISHED', data.completed, 610, 950, '#10b981');
+            drawList('IN PROGRESS', data.incomplete.length, data.incomplete, 50, 950, '#f59e0b');
+            drawList('COMPLETED', data.completed.length, data.completed, 610, 950, '#10b981');
 
-            // Branding
             ctx.fillStyle = '#6366f1'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('ReaderPersona', 50, 1400);
             ctx.fillStyle = '#94a3b8'; ctx.font = '16px sans-serif'; ctx.fillText('Generated ' + new Date().toLocaleDateString(), 240, 1400);
 
@@ -407,8 +353,6 @@
             link.href = canvas.toDataURL('image/png', 1.0);
             link.click();
         }
-
-        // --- Interaction ---
 
         document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -419,9 +363,7 @@
                     const json = JSON.parse(event.target.result);
                     currentData = processData(json);
                     updateUI(currentData);
-                } catch (err) {
-                    alert("Invalid JSON format.");
-                }
+                } catch (err) { alert("Invalid JSON format."); }
             };
             reader.readAsText(file);
         });
@@ -435,12 +377,10 @@
 
         document.getElementById('btn-snapshot').addEventListener('click', generateSnapshot);
 
-        // Simple drag-over visual
         const dropZone = document.getElementById('upload-container');
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drop-zone-active'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drop-zone-active'));
         dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drop-zone-active'); });
-
     </script>
 </body>
 </html>
