@@ -1,560 +1,446 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { 
-  BookOpen, 
-  Upload, 
-  Trophy, 
-  Flame, 
-  Clock, 
-  FileText,
-  RefreshCw,
-  Info,
-  User,
-  Zap,
-  Headphones,
-  Calendar,
-  PieChart as PieIcon,
-  Camera,
-  Download,
-  ListTodo,
-  CheckCircle2,
-  Image as ImageIcon,
-  Compass,
-  Lightbulb,
-  Sun,
-  Layers
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReaderPersona - Visual Reading Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .canvas-hidden { display: none; }
+        .drop-zone-active { border-color: #6366f1; background-color: #f5f3ff; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
 
-/**
- * ReaderPersona
- * Visual analysis of reading logs with high-fidelity canvas snapshot generation.
- * Tracks In-Progress and Completed books with expanded genre-based archetypes.
- */
-
-const ARCHETYPES = {
-  THE_CONSISTENT_LOGSETTER: {
-    title: "The Steady Habit-Builder",
-    description: "You have frequent reading sessions and are building a powerful daily habit!",
-    icon: <Calendar className="w-12 h-12 text-emerald-500" />,
-    color: "bg-emerald-50",
-    hex: "#10b981"
-  },
-  THE_AUDIO_EXPLORER: {
-    title: "The Audio Explorer",
-    description: "You enjoy stories on the go! Your logs show a preference for audiobooks and immersive listening.",
-    icon: <Headphones className="w-12 h-12 text-blue-500" />,
-    color: "bg-blue-50",
-    hex: "#3b82f6"
-  },
-  THE_SPRINTER: {
-    title: "The Sprint Reader",
-    description: "You dive in for quick, high-impact sessions. You're great at squeezing reading into your busy schedule.",
-    icon: <Zap className="w-12 h-12 text-orange-500" />,
-    color: "bg-orange-50",
-    hex: "#f59e0b"
-  },
-  THE_DEEP_DIVER: {
-    title: "The Marathoner",
-    description: "When you start, you don't stop. Your sessions are long and focused, allowing for deep immersion.",
-    icon: <Clock className="w-12 h-12 text-purple-500" />,
-    color: "bg-purple-50",
-    hex: "#8b5cf6"
-  },
-  THE_ACCOMPLISHED: {
-    title: "The Goal Crusher",
-    description: "You focus on completion. Seeing that 'Completed' status gives you the ultimate satisfaction.",
-    icon: <Trophy className="w-12 h-12 text-yellow-500" />,
-    color: "bg-yellow-50",
-    hex: "#eab308"
-  },
-  // NEW ARCHETYPES
-  THE_VISUAL_STORYTELLER: {
-    title: "The Visual Storyteller",
-    description: "You have a sharp eye for detail! Your logs show a love for Graphic Novels and Manga, where art and story meet.",
-    icon: <ImageIcon className="w-12 h-12 text-pink-500" />,
-    color: "bg-pink-50",
-    hex: "#ec4899"
-  },
-  THE_KNOWLEDGE_SEEKER: {
-    title: "The Knowledge Seeker",
-    description: "You read to learn. Your preference for Non-Fiction shows a curious mind always looking for the 'why' and 'how'.",
-    icon: <Lightbulb className="w-12 h-12 text-amber-600" />,
-    color: "bg-amber-50",
-    hex: "#d97706"
-  },
-  THE_MYTH_MAKER: {
-    title: "The Myth-Maker",
-    description: "You love escaping to other worlds. Your logs are filled with Fantasy and Sci-Fi adventures.",
-    icon: <Compass className="w-12 h-12 text-cyan-600" />,
-    color: "bg-cyan-50",
-    hex: "#0891b2"
-  },
-  THE_EARLY_BIRD: {
-    title: "The Early Bird",
-    description: "You start your day with stories. Most of your reading happens while the world is still waking up.",
-    icon: <Sun className="w-12 h-12 text-orange-400" />,
-    color: "bg-orange-50/50",
-    hex: "#fb923c"
-  },
-  THE_VERSATILE: {
-    title: "The Versatile Reader",
-    description: "You can't be pinned down! Your reading list covers a massive range of genres and styles.",
-    icon: <Layers className="w-12 h-12 text-slate-600" />,
-    color: "bg-slate-100",
-    hex: "#475569"
-  }
-};
-
-const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#d97706', '#0891b2'];
-
-const GenrePieChart = ({ data }) => {
-  const size = 200;
-  const radius = 80;
-  const center = size / 2;
-
-  const chartData = useMemo(() => {
-    const total = Object.values(data).reduce((a, b) => a + b, 0);
-    if (total === 0) return [];
-    let startAngle = 0;
-    
-    return Object.entries(data).map(([label, value], i) => {
-      const percentage = (value / total);
-      const angle = percentage * 360;
-      
-      const x1 = center + radius * Math.cos((Math.PI * (startAngle - 90)) / 180);
-      const y1 = center + radius * Math.sin((Math.PI * (startAngle - 90)) / 180);
-      const x2 = center + radius * Math.cos((Math.PI * (startAngle + angle - 90)) / 180);
-      const y2 = center + radius * Math.sin((Math.PI * (startAngle + angle - 90)) / 180);
-      
-      const largeArc = angle > 180 ? 1 : 0;
-      const pathData = `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-      
-      const currentStart = startAngle;
-      startAngle += angle;
-      
-      return { pathData, label, percentage, color: COLORS[i % COLORS.length] };
-    });
-  }, [data]);
-
-  return (
-    <div className="flex flex-col md:flex-row items-center gap-8">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {chartData.map((slice, i) => (
-          <path 
-            key={i} 
-            d={slice.pathData} 
-            fill={slice.color} 
-            className="hover:opacity-80 transition-opacity cursor-pointer"
-          >
-            <title>{slice.label}: {Math.round(slice.percentage * 100)}%</title>
-          </path>
-        ))}
-        <circle cx={center} cy={center} r={radius * 0.5} fill="white" />
-      </svg>
-      <div className="flex flex-col gap-1">
-        {chartData.map((slice, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: slice.color }} />
-            <span className="text-[11px] font-bold text-slate-700 truncate max-w-[100px]">{slice.label}</span>
-            <span className="text-[10px] text-slate-400">{Math.round(slice.percentage * 100)}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const App = () => {
-  const [rawData, setRawData] = useState(null);
-  const [error, setError] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false);
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    readFile(file);
-  };
-
-  const readFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const json = JSON.parse(event.target.result);
-        if (!json.logs && !Array.isArray(json)) {
-          throw new Error("Invalid format: Could not find reading logs.");
-        }
-        setRawData(json);
-        setError(null);
-      } catch (err) {
-        setError("Invalid JSON format. Please use the Reading Log export format.");
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const { logs, profile, stats, persona, genreData, incompleteBooks, completedBooks } = useMemo(() => {
-    if (!rawData) return { logs: [], profile: null, stats: null, persona: null, genreData: {}, incompleteBooks: [], completedBooks: [] };
-
-    const logsArray = Array.isArray(rawData) ? rawData : (rawData.logs || []);
-    const profileData = rawData.profile || null;
-    const completedListFromExport = rawData.completedBooks || [];
-
-    const bookStatusMap = new Map();
-    logsArray.forEach(log => {
-      const existing = bookStatusMap.get(log.bookTitle) || { title: log.bookTitle, isCompleted: false };
-      if (log.completed) existing.isCompleted = true;
-      bookStatusMap.set(log.bookTitle, existing);
-    });
-
-    completedListFromExport.forEach(b => {
-      bookStatusMap.set(b.title || b.bookTitle, { title: b.title || b.bookTitle, isCompleted: true });
-    });
-
-    const incomplete = [];
-    const completed = [];
-    bookStatusMap.forEach((status, title) => {
-      if (status.isCompleted) completed.push(title);
-      else incomplete.push(title);
-    });
-
-    const totalMinutes = logsArray.reduce((acc, l) => acc + (l.duration || 0), 0);
-    const totalPages = logsArray.reduce((acc, l) => acc + (l.pages || 0), 0);
-    const avgDuration = totalMinutes / (logsArray.length || 1);
-    
-    const typeCounts = {};
-    const genreCounts = {};
-    logsArray.forEach(l => {
-      typeCounts[l.type] = (typeCounts[l.type] || 0) + 1;
-      const g = l.genre?.toLowerCase() || 'other';
-      genreCounts[g] = (genreCounts[g] || 0) + 1;
-    });
-
-    const statsObj = {
-      totalLogs: logsArray.length,
-      totalMinutes,
-      totalPages,
-      completedCount: completed.length,
-      avgDuration: Math.round(avgDuration)
-    };
-
-    // --- ENHANCED ARCHETYPE LOGIC ---
-    let selectedPersona = ARCHETYPES.THE_SPRINTER;
-    
-    // 1. Audio Check
-    if (typeCounts.audiobook > logsArray.length / 3) {
-      selectedPersona = ARCHETYPES.THE_AUDIO_EXPLORER;
-    } 
-    // 2. Visual Check (Graphic Novels / Manga)
-    else if ((genreCounts.graphic || 0) + (genreCounts.manga || 0) > logsArray.length / 2) {
-      selectedPersona = ARCHETYPES.THE_VISUAL_STORYTELLER;
-    }
-    // 3. Knowledge Check (Non-Fiction)
-    else if ((genreCounts.nonfiction || 0) + (genreCounts.informational || 0) > logsArray.length / 3) {
-      selectedPersona = ARCHETYPES.THE_KNOWLEDGE_SEEKER;
-    }
-    // 4. Fantasy/Sci-Fi Check
-    else if ((genreCounts.fantasy || 0) + (genreCounts.scifi || 0) > logsArray.length / 3) {
-      selectedPersona = ARCHETYPES.THE_MYTH_MAKER;
-    }
-    // 5. Early Bird Check
-    else if (typeCounts.morning > logsArray.length / 2) {
-      selectedPersona = ARCHETYPES.THE_EARLY_BIRD;
-    }
-    // 6. Versatile Check
-    else if (Object.keys(genreCounts).length >= 4 && logsArray.length > 5) {
-      selectedPersona = ARCHETYPES.THE_VERSATILE;
-    }
-    // 7. Completion Check
-    else if (completed.length > 0 && logsArray.length < 10) {
-      selectedPersona = ARCHETYPES.THE_ACCOMPLISHED;
-    }
-    // 8. Duration Check
-    else if (avgDuration > 45) {
-      selectedPersona = ARCHETYPES.THE_DEEP_DIVER;
-    }
-    // 9. Habit Check
-    else if (logsArray.length > 5) {
-      selectedPersona = ARCHETYPES.THE_CONSISTENT_LOGSETTER;
-    }
-
-    return { 
-      logs: logsArray, 
-      profile: profileData, 
-      stats: statsObj, 
-      persona: selectedPersona,
-      genreData: genreCounts,
-      incompleteBooks: incomplete,
-      completedBooks: completed
-    };
-  }, [rawData]);
-
-  const generateScreenshot = () => {
-    setIsCapturing(true);
-    
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const w = 1200;
-    const h = 1450; 
-    canvas.width = w;
-    canvas.height = h;
-
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, w, h);
-
-    // Profile
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.roundRect(50, 50, 1100, 120, 30);
-    ctx.fill();
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 40px sans-serif';
-    ctx.fillText(profile?.name || 'Reader', 100, 125);
-    ctx.fillStyle = '#6366f1';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.fillText(`${profile?.readingLevel || 'Active'} Reader • Grade ${profile?.grade || 'N/A'}`, 100, 155);
-
-    // Archetype
-    ctx.fillStyle = persona.hex + '15';
-    ctx.beginPath();
-    ctx.roundRect(50, 190, 1100, 320, 40);
-    ctx.fill();
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 55px sans-serif';
-    ctx.fillText(persona.title, 100, 300);
-    ctx.fillStyle = '#475569';
-    ctx.font = '28px sans-serif';
-    const lines = persona.description.match(/.{1,60}(\s|$)/g) || [];
-    lines.forEach((line, i) => ctx.fillText(line.trim(), 100, 360 + (i * 45)));
-
-    // Stats
-    const statsArr = [
-      { label: 'MINUTES', val: `${stats.totalMinutes}m` },
-      { label: 'PAGES', val: stats.totalPages },
-      { label: 'COMPLETED', val: stats.completedCount },
-      { label: 'SESSIONS', val: stats.totalLogs }
-    ];
-    statsArr.forEach((s, i) => {
-      const x = 50 + (i * 270);
-      const y = 530;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.roundRect(x, y, 250, 140, 30);
-      ctx.fill();
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.fillText(s.label, x + 30, y + 50);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 45px sans-serif';
-      ctx.fillText(s.val, x + 30, y + 105);
-    });
-
-    // Genre Pie
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.roundRect(50, 690, 1100, 240, 40);
-    ctx.fill();
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.fillText('GENRE PROFILE', 100, 740);
-
-    const totalGenres = Object.values(genreData).reduce((a, b) => a + b, 0);
-    if (totalGenres > 0) {
-      let currentAngle = -0.5 * Math.PI;
-      const chartX = 200, chartY = 820, chartR = 60;
-      Object.entries(genreData).forEach(([label, value], i) => {
-        const sliceAngle = (value / totalGenres) * 2 * Math.PI;
-        ctx.fillStyle = COLORS[i % COLORS.length];
-        ctx.beginPath();
-        ctx.moveTo(chartX, chartY);
-        ctx.arc(chartX, chartY, chartR, currentAngle, currentAngle + sliceAngle);
-        ctx.fill();
-        ctx.fillRect(320 + (Math.floor(i/3) * 250), 770 + ((i % 3) * 35), 15, 15);
-        ctx.fillStyle = '#1e293b';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillText(`${label}`, 345 + (Math.floor(i/3) * 250), 783 + ((i % 3) * 35));
-        currentAngle += sliceAngle;
-      });
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(chartX, chartY, chartR * 0.5, 0, 2 * Math.PI); ctx.fill();
-    }
-
-    // Books Progress
-    const drawBooks = (title, list, y, color) => {
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.roundRect(50, y, 540, 400, 40);
-      ctx.fill();
-      ctx.fillStyle = color;
-      ctx.font = 'bold 18px sans-serif';
-      ctx.fillText(title, 100, y + 50);
-      ctx.fillStyle = '#475569';
-      ctx.font = 'bold 18px sans-serif';
-      if (list.length > 0) {
-        list.slice(0, 8).forEach((t, i) => ctx.fillText(`• ${t}`, 100, y + 100 + (i * 35)));
-        if (list.length > 8) ctx.fillText(`+ ${list.length - 8} more...`, 100, y + 375);
-      } else {
-        ctx.font = 'italic 16px sans-serif';
-        ctx.fillText('None recorded', 100, y + 100);
-      }
-    };
-
-    drawBooks('CURRENTLY READING', incompleteBooks, 950, '#f59e0b');
-    ctx.translate(560, 0);
-    drawBooks('BOOKS FINISHED', completedBooks, 950, '#10b981');
-    ctx.translate(-560, 0);
-
-    // Footer
-    ctx.fillStyle = '#6366f1';
-    ctx.font = 'bold 24px sans-serif';
-    ctx.fillText('ReaderPersona', 50, 1400);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '16px sans-serif';
-    ctx.fillText('Generated ' + new Date().toLocaleDateString(), 240, 1400);
-
-    const dataUrl = canvas.toDataURL('image/png', 1.0);
-    const link = document.createElement('a');
-    link.download = `ReaderPersona-${profile?.name || 'Report'}.png`;
-    link.href = dataUrl;
-    link.click();
-    setTimeout(() => setIsCapturing(false), 800);
-  };
-
-  const reset = () => { setRawData(null); setError(null); };
-
-  return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-10 text-center flex flex-col items-center">
-          <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl transform -rotate-3 mb-4">
-            <BookOpen className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">ReaderPersona</h1>
-          <p className="text-slate-500 text-lg">Visual analysis of your reading journey.</p>
+    <div id="app" class="max-w-4xl mx-auto p-4 md:p-8">
+        <!-- Header -->
+        <header class="mb-10 text-center flex flex-col items-center">
+            <div class="p-3 bg-indigo-600 rounded-2xl shadow-xl transform -rotate-3 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2a2.5 2.5 0 0 1 2.5 2.5M20 19.5v-15a2.5 2.5 0 0 0-2.5-2.5 2.5 2.5 0 0 0-2.5 2.5"/><path d="M20 19.5a2.5 2.5 0 0 1-2.5 2.5H6.5a2.5 2.5 0 0 1-2.5-2.5"/><path d="M4 19.5a2.5 2.5 0 0 1 2.5-2.5H20"/></svg>
+            </div>
+            <h1 class="text-4xl font-black tracking-tight text-slate-900 mb-2">ReaderPersona</h1>
+            <p class="text-slate-500 text-lg">Visual analysis of your reading journey.</p>
         </header>
 
-        {!rawData ? (
-          <div 
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setIsDragging(false); readFile(e.dataTransfer.files[0]); }}
-            className={`relative border-2 border-dashed rounded-3xl p-16 text-center transition-all duration-300 ${
-              isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-white'
-            }`}
-          >
-            <input type="file" accept=".json" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-            <Upload className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-xl font-bold text-slate-700">Upload Reading Log</p>
-          </div>
-        ) : (
-          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4 flex-1 overflow-hidden">
-                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 flex-shrink-0">
-                  <User className="w-6 h-6" />
+        <!-- Upload State -->
+        <div id="upload-container" class="relative border-2 border-dashed border-slate-300 bg-white rounded-3xl p-16 text-center transition-all duration-300 hover:border-indigo-500">
+            <input type="file" id="file-input" accept=".json" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+            <svg class="w-12 h-12 text-slate-300 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p class="text-xl font-bold text-slate-700">Upload Reading Log JSON</p>
+            <p class="text-slate-400 mt-2">Drag and drop or click to browse</p>
+        </div>
+
+        <!-- Dashboard State (Hidden by default) -->
+        <div id="dashboard" class="hidden space-y-6 animate-in fade-in duration-500">
+            <!-- User Bar -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4 flex-1 overflow-hidden">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 flex-shrink-0">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="truncate">
+                        <h3 id="display-name" class="text-xl font-black text-slate-800 leading-tight truncate">Reader</h3>
+                        <span id="display-grade" class="text-[10px] font-bold uppercase text-indigo-500 px-1.5 py-0.5 bg-indigo-50 rounded border border-indigo-100">Grade N/A</span>
+                    </div>
                 </div>
-                <div className="truncate">
-                  <h3 className="text-xl font-black text-slate-800 leading-tight truncate">{profile?.name || 'Reader'}</h3>
-                  <span className="text-[10px] font-bold uppercase text-indigo-500 px-1.5 py-0.5 bg-indigo-50 rounded border border-indigo-100">Grade {profile?.grade || 'N/A'}</span>
+                <div class="flex gap-2">
+                    <button id="btn-snapshot" class="flex-1 md:flex-none flex items-center gap-2 bg-slate-900 text-white px-6 py-4 rounded-3xl font-bold text-sm shadow-lg hover:bg-slate-800 transition-colors">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        Snapshot
+                    </button>
+                    <button id="btn-reset" class="p-4 bg-white border border-slate-200 rounded-3xl text-slate-500 hover:bg-slate-50">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                    </button>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={generateScreenshot} disabled={isCapturing} className="flex-1 md:flex-none flex items-center gap-2 bg-slate-900 text-white px-6 py-4 rounded-3xl font-bold text-sm shadow-lg hover:bg-slate-800 transition-colors">
-                  {isCapturing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />} Snapshot
-                </button>
-                <button onClick={reset} className="p-4 bg-white border border-slate-200 rounded-3xl text-slate-500"><RefreshCw className="w-5 h-5" /></button>
-              </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className={`lg:col-span-2 rounded-[2rem] p-8 border border-slate-200 shadow-xl relative overflow-hidden ${persona.color}`}>
-                <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
-                  <div className="p-5 bg-white rounded-3xl shadow-lg ring-8 ring-white/50">{persona.icon}</div>
-                  <div className="text-center sm:text-left">
-                    <span className="bg-white/50 px-3 py-1 rounded-full text-indigo-600 font-black uppercase tracking-widest text-[10px]">Your Archetype</span>
-                    <h2 className="text-3xl font-black text-slate-900 mt-2 mb-3">{persona.title}</h2>
-                    <p className="text-slate-600 text-sm leading-relaxed">{persona.description}</p>
-                  </div>
+            <!-- Archetype & Chart -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div id="persona-card" class="lg:col-span-2 rounded-[2rem] p-8 border border-slate-200 shadow-xl relative overflow-hidden">
+                    <div class="relative z-10 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+                        <div id="persona-icon-container" class="p-5 bg-white rounded-3xl shadow-lg ring-8 ring-white/50">
+                            <!-- Icon injected here -->
+                        </div>
+                        <div>
+                            <span class="bg-white/50 px-3 py-1 rounded-full text-indigo-600 font-black uppercase tracking-widest text-[10px]">Your Archetype</span>
+                            <h2 id="persona-title" class="text-3xl font-black text-slate-900 mt-2 mb-3">Archetype Name</h2>
+                            <p id="persona-description" class="text-slate-600 text-sm leading-relaxed">Archetype description goes here.</p>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col items-center">
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 self-start">Genre Mix</h3>
-                <GenrePieChart data={genreData} />
-              </div>
+                <div class="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col items-center">
+                    <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 self-start">Genre Mix</h3>
+                    <div id="chart-container" class="w-full flex flex-col items-center">
+                        <canvas id="genreChart" width="180" height="180"></canvas>
+                        <div id="genre-legend" class="mt-4 grid grid-cols-2 gap-2 w-full"></div>
+                    </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <ListTodo className="w-4 h-4 text-amber-500" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Currently Reading</h3>
+            <!-- Book Shelf -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Currently Reading</h3>
+                    </div>
+                    <div id="shelf-current" class="flex flex-wrap gap-2 text-sm"></div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {incompleteBooks.length > 0 ? incompleteBooks.map((t, i) => (
-                    <span key={i} className="px-3 py-1.5 bg-amber-50/50 border border-amber-100 rounded-xl text-sm font-bold text-amber-700">📖 {t}</span>
-                  )) : <p className="text-sm text-slate-400 italic">No books in progress.</p>}
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Completed Books</h3>
+                    </div>
+                    <div id="shelf-completed" class="flex flex-wrap gap-2 text-sm"></div>
                 </div>
-              </div>
-              <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Completed Books</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {completedBooks.length > 0 ? completedBooks.map((t, i) => (
-                    <span key={i} className="px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm font-bold text-emerald-700">✅ {t}</span>
-                  )) : <p className="text-sm text-slate-400 italic">No books finished yet.</p>}
-                </div>
-              </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Time Spent', val: `${stats.totalMinutes}m`, icon: <Clock className="w-4 h-4" /> },
-                { label: 'Pages Read', val: stats.totalPages, icon: <FileText className="w-4 h-4" /> },
-                { label: 'Completed', val: stats.completedCount, icon: <Trophy className="w-4 h-4" /> },
-                { label: 'Avg Session', val: `${stats.avgDuration}m`, icon: <Flame className="w-4 h-4" /> }
-              ].map((stat, i) => (
-                <div key={i} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-2 text-slate-400 mb-2">{stat.icon}
-                    <span className="text-[10px] font-black uppercase tracking-wider">{stat.label}</span>
-                  </div>
-                  <p className="text-3xl font-black text-slate-800">{stat.val}</p>
-                </div>
-              ))}
+            <!-- Stats Grid -->
+            <div id="stats-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Stats cards injected here -->
             </div>
 
-            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm">Activity History</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50/80 text-slate-400 text-[10px] font-black uppercase">
-                    <tr><th className="px-8 py-4">Date</th><th className="px-8 py-4">Book Title</th><th className="px-8 py-4">Stats</th></tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {logs.map((log, i) => (
-                      <tr key={i} className="hover:bg-slate-50">
-                        <td className="px-8 py-5 text-sm font-medium text-slate-400">{log.date}</td>
-                        <td className="px-8 py-5">
-                          <p className="font-bold text-slate-800">{log.bookTitle}</p>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase">{log.genre}</span>
-                        </td>
-                        <td className="px-8 py-5 flex gap-4 text-sm font-bold text-slate-600">
-                          <span className="flex items-center gap-1"><Clock className="w-3 h-3"/>{log.duration}m</span>
-                          <span className="flex items-center gap-1"><FileText className="w-3 h-3"/>{log.pages}p</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <!-- Table -->
+            <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+                    <h3 class="font-black text-slate-800 uppercase tracking-tight text-sm">Activity History</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/80 text-slate-400 text-[10px] font-black uppercase">
+                            <tr>
+                                <th class="px-8 py-4">Date</th>
+                                <th class="px-8 py-4">Book Title</th>
+                                <th class="px-8 py-4">Stats</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
             </div>
-          </div>
-        )}
-      </div>
+        </div>
     </div>
-  );
-};
 
-export default App;
+    <script>
+        const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#d97706', '#0891b2'];
+        
+        const ICONS = {
+            habit: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+            audio: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>`,
+            sprint: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+            deep: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+            trophy: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`,
+            visual: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+            knowledge: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7Z"/></svg>`,
+            myth: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`,
+            sun: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+            versatile: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`
+        };
+
+        const ARCHETYPES = {
+            THE_CONSISTENT_LOGSETTER: { title: "The Steady Habit-Builder", description: "You have frequent reading sessions and are building a powerful daily habit!", icon: ICONS.habit, color: "bg-emerald-50", hex: "#10b981" },
+            THE_AUDIO_EXPLORER: { title: "The Audio Explorer", description: "You enjoy stories on the go! Your logs show a preference for audiobooks and immersive listening.", icon: ICONS.audio, color: "bg-blue-50", hex: "#3b82f6" },
+            THE_SPRINTER: { title: "The Sprint Reader", description: "You dive in for quick, high-impact sessions. You're great at squeezing reading into your busy schedule.", icon: ICONS.sprint, color: "bg-orange-50", hex: "#f59e0b" },
+            THE_DEEP_DIVER: { title: "The Marathoner", description: "When you start, you don't stop. Your sessions are long and focused, allowing for deep immersion.", icon: ICONS.deep, color: "bg-purple-50", hex: "#8b5cf6" },
+            THE_ACCOMPLISHED: { title: "The Goal Crusher", description: "You focus on completion. Seeing that 'Completed' status gives you the ultimate satisfaction.", icon: ICONS.trophy, color: "bg-yellow-50", hex: "#eab308" },
+            THE_VISUAL_STORYTELLER: { title: "The Visual Storyteller", description: "You have a sharp eye for detail! Your logs show a love for Graphic Novels and Manga.", icon: ICONS.visual, color: "bg-pink-50", hex: "#ec4899" },
+            THE_KNOWLEDGE_SEEKER: { title: "The Knowledge Seeker", description: "You read to learn. Your preference for Non-Fiction shows a curious mind looking for facts.", icon: ICONS.knowledge, color: "bg-amber-50", hex: "#d97706" },
+            THE_MYTH_MAKER: { title: "The Myth-Maker", description: "You love escaping to other worlds. Your logs are filled with Fantasy and Sci-Fi adventures.", icon: ICONS.myth, color: "bg-cyan-50", hex: "#0891b2" },
+            THE_EARLY_BIRD: { title: "The Early Bird", description: "You start your day with stories. Most of your reading happens in the morning.", icon: ICONS.sun, color: "bg-orange-50/50", hex: "#fb923c" },
+            THE_VERSATILE: { title: "The Versatile Reader", description: "You can't be pinned down! Your reading list covers a massive range of genres.", icon: ICONS.versatile, color: "bg-slate-100", hex: "#475569" }
+        };
+
+        let currentData = null;
+
+        // --- Core Logic ---
+
+        function processData(rawData) {
+            const logs = Array.isArray(rawData) ? rawData : (rawData.logs || []);
+            const profile = rawData.profile || { name: 'Reader', grade: 'N/A' };
+            const completedListExport = rawData.completedBooks || [];
+
+            const bookMap = new Map();
+            logs.forEach(l => {
+                const existing = bookMap.get(l.bookTitle) || { title: l.bookTitle, isCompleted: false };
+                if (l.completed) existing.isCompleted = true;
+                bookMap.set(l.bookTitle, existing);
+            });
+            completedListExport.forEach(b => {
+                bookMap.set(b.title || b.bookTitle, { title: b.title || b.bookTitle, isCompleted: true });
+            });
+
+            const incomplete = [];
+            const completed = [];
+            bookMap.forEach((status, title) => status.isCompleted ? completed.push(title) : incomplete.push(title));
+
+            const totalMinutes = logs.reduce((a, l) => a + (l.duration || 0), 0);
+            const totalPages = logs.reduce((a, l) => a + (l.pages || 0), 0);
+            const avgDuration = totalMinutes / (logs.length || 1);
+
+            const typeCounts = {};
+            const genreCounts = {};
+            logs.forEach(l => {
+                typeCounts[l.type] = (typeCounts[l.type] || 0) + 1;
+                const g = l.genre?.toLowerCase() || 'other';
+                genreCounts[g] = (genreCounts[g] || 0) + 1;
+            });
+
+            // Persona Selection
+            let persona = ARCHETYPES.THE_SPRINTER;
+            if (typeCounts.audiobook > logs.length / 3) persona = ARCHETYPES.THE_AUDIO_EXPLORER;
+            else if ((genreCounts.graphic || 0) + (genreCounts.manga || 0) > logs.length / 2) persona = ARCHETYPES.THE_VISUAL_STORYTELLER;
+            else if ((genreCounts.nonfiction || 0) + (genreCounts.informational || 0) > logs.length / 3) persona = ARCHETYPES.THE_KNOWLEDGE_SEEKER;
+            else if ((genreCounts.fantasy || 0) + (genreCounts.scifi || 0) > logs.length / 3) persona = ARCHETYPES.THE_MYTH_MAKER;
+            else if (typeCounts.morning > logs.length / 2) persona = ARCHETYPES.THE_EARLY_BIRD;
+            else if (Object.keys(genreCounts).length >= 4 && logs.length > 5) persona = ARCHETYPES.THE_VERSATILE;
+            else if (completed.length > 0 && logs.length < 10) persona = ARCHETYPES.THE_ACCOMPLISHED;
+            else if (avgDuration > 45) persona = ARCHETYPES.THE_DEEP_DIVER;
+            else if (logs.length > 5) persona = ARCHETYPES.THE_CONSISTENT_LOGSETTER;
+
+            return { logs, profile, stats: { totalMinutes, totalPages, completedCount: completed.length, totalLogs: logs.length, avgDuration: Math.round(avgDuration) }, persona, genreCounts, incomplete, completed };
+        }
+
+        function updateUI(data) {
+            document.getElementById('upload-container').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+
+            // Profile
+            document.getElementById('display-name').textContent = data.profile.name || 'Reader';
+            document.getElementById('display-grade').textContent = `Grade ${data.profile.grade || 'N/A'}`;
+
+            // Persona
+            const card = document.getElementById('persona-card');
+            card.className = `lg:col-span-2 rounded-[2rem] p-8 border border-slate-200 shadow-xl relative overflow-hidden ${data.persona.color}`;
+            document.getElementById('persona-icon-container').innerHTML = data.persona.icon;
+            document.getElementById('persona-title').textContent = data.persona.title;
+            document.getElementById('persona-description').textContent = data.persona.description;
+
+            // Stats
+            const stats = [
+                { label: 'Time Spent', val: `${data.stats.totalMinutes}m` },
+                { label: 'Pages Read', val: data.stats.totalPages },
+                { label: 'Completed', val: data.stats.completedCount },
+                { label: 'Avg Session', val: `${data.stats.avgDuration}m` }
+            ];
+            const statsGrid = document.getElementById('stats-grid');
+            statsGrid.innerHTML = stats.map(s => `
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">${s.label}</span>
+                    <p class="text-3xl font-black text-slate-800">${s.val}</p>
+                </div>
+            `).join('');
+
+            // Shelf
+            document.getElementById('shelf-current').innerHTML = data.incomplete.length ? data.incomplete.map(t => `<span class="px-3 py-1.5 bg-amber-50/50 border border-amber-100 rounded-xl font-bold text-amber-700">📖 ${t}</span>`).join('') : '<p class="text-slate-400 italic">None</p>';
+            document.getElementById('shelf-completed').innerHTML = data.completed.length ? data.completed.map(t => `<span class="px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl font-bold text-emerald-700">✅ ${t}</span>`).join('') : '<p class="text-slate-400 italic">None</p>';
+
+            // Table
+            document.getElementById('history-body').innerHTML = data.logs.map(l => `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-8 py-5 text-sm font-medium text-slate-400">${l.date}</td>
+                    <td class="px-8 py-5">
+                        <p class="font-bold text-slate-800">${l.bookTitle}</p>
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">${l.genre}</span>
+                    </td>
+                    <td class="px-8 py-5 text-sm font-bold text-slate-600">${l.duration}m / ${l.pages}p</td>
+                </tr>
+            `).join('');
+
+            renderChart(data.genreCounts);
+        }
+
+        function renderChart(genreData) {
+            const canvas = document.getElementById('genreChart');
+            const ctx = canvas.getContext('2d');
+            const entries = Object.entries(genreData);
+            const total = entries.reduce((a, b) => a + b[1], 0);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let start = -0.5 * Math.PI;
+            const legend = document.getElementById('genre-legend');
+            legend.innerHTML = '';
+
+            entries.forEach(([label, val], i) => {
+                const angle = (val / total) * 2 * Math.PI;
+                const color = COLORS[i % COLORS.length];
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(90, 90);
+                ctx.arc(90, 90, 80, start, start + angle);
+                ctx.fill();
+                
+                legend.innerHTML += `
+                    <div class="flex items-center gap-1.5 overflow-hidden">
+                        <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${color}"></div>
+                        <span class="text-[10px] font-bold text-slate-700 truncate">${label}</span>
+                        <span class="text-[9px] text-slate-400">${Math.round((val/total)*100)}%</span>
+                    </div>
+                `;
+                
+                start += angle;
+            });
+
+            // Hole
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(90, 90, 45, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // --- Screenshot Logic ---
+
+        function generateSnapshot() {
+            if (!currentData) return;
+            const data = currentData;
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const w = 1200;
+            const h = 1450;
+            canvas.width = w;
+            canvas.height = h;
+
+            // Background
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, w, h);
+
+            // Helper for rounded rects
+            const rRect = (x, y, width, height, radius, fill) => {
+                ctx.fillStyle = fill;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.fill();
+            };
+
+            // Profile Header
+            rRect(50, 50, 1100, 120, 30, '#ffffff');
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 40px sans-serif';
+            ctx.fillText(data.profile.name || 'Reader', 100, 125);
+            ctx.fillStyle = '#6366f1';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.fillText(`${data.profile.readingLevel || 'Active'} Reader • Grade ${data.profile.grade || 'N/A'}`, 100, 155);
+
+            // Archetype Card
+            rRect(50, 190, 1100, 320, 40, data.persona.hex + '15');
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 55px sans-serif';
+            ctx.fillText(data.persona.title, 100, 300);
+            ctx.fillStyle = '#475569';
+            ctx.font = '28px sans-serif';
+            const wrapText = (text, maxWidth) => {
+                const words = text.split(' ');
+                const lines = [];
+                let currentLine = words[0];
+                for (let i = 1; i < words.length; i++) {
+                    if (currentLine.length + words[i].length < 60) currentLine += " " + words[i];
+                    else { lines.push(currentLine); currentLine = words[i]; }
+                }
+                lines.push(currentLine);
+                return lines;
+            };
+            wrapText(data.persona.description).forEach((l, i) => ctx.fillText(l, 100, 360 + (i * 45)));
+
+            // Stats
+            const statsArr = [
+                { l: 'MINUTES', v: `${data.stats.totalMinutes}m` },
+                { l: 'PAGES', v: data.stats.totalPages },
+                { l: 'COMPLETED', v: data.stats.completedCount },
+                { l: 'SESSIONS', v: data.stats.totalLogs }
+            ];
+            statsArr.forEach((s, i) => {
+                const x = 50 + (i * 270);
+                rRect(x, 530, 250, 140, 30, '#ffffff');
+                ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 14px sans-serif'; ctx.fillText(s.l, x + 30, 580);
+                ctx.fillStyle = '#0f172a'; ctx.font = 'bold 45px sans-serif'; ctx.fillText(s.v, x + 30, 635);
+            });
+
+            // Genre Pie
+            rRect(50, 690, 1100, 240, 40, '#ffffff');
+            ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('GENRE PROFILE', 100, 740);
+            
+            const entries = Object.entries(data.genreCounts);
+            const total = entries.reduce((a, b) => a + b[1], 0);
+            let start = -0.5 * Math.PI;
+            entries.forEach(([label, val], i) => {
+                const angle = (val / total) * 2 * Math.PI;
+                const color = COLORS[i % COLORS.length];
+                ctx.fillStyle = color;
+                ctx.beginPath(); ctx.moveTo(200, 820); ctx.arc(200, 820, 60, start, start + angle); ctx.fill();
+                ctx.fillRect(320 + (Math.floor(i/3)*250), 770 + ((i%3)*35), 15, 15);
+                ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.fillText(label, 345 + (Math.floor(i/3)*250), 783 + ((i%3)*35));
+                start += angle;
+            });
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(200, 820, 30, 0, 2*Math.PI); ctx.fill();
+
+            // Shelf
+            const drawList = (title, list, x, y, color) => {
+                rRect(x, y, 540, 400, 40, '#ffffff');
+                ctx.fillStyle = color; ctx.font = 'bold 18px sans-serif'; ctx.fillText(title, x + 40, y + 50);
+                ctx.fillStyle = '#475569'; ctx.font = 'bold 18px sans-serif';
+                if (list.length) {
+                    list.slice(0, 8).forEach((t, i) => ctx.fillText(`• ${t}`, x + 40, y + 100 + (i * 35)));
+                    if (list.length > 8) ctx.fillText(`+ ${list.length - 8} more...`, x + 40, y + 375);
+                } else ctx.fillText('None recorded', x + 40, y + 100);
+            };
+            drawList('CURRENTLY READING', data.incomplete, 50, 950, '#f59e0b');
+            drawList('BOOKS FINISHED', data.completed, 610, 950, '#10b981');
+
+            // Branding
+            ctx.fillStyle = '#6366f1'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('ReaderPersona', 50, 1400);
+            ctx.fillStyle = '#94a3b8'; ctx.font = '16px sans-serif'; ctx.fillText('Generated ' + new Date().toLocaleDateString(), 240, 1400);
+
+            const link = document.createElement('a');
+            link.download = `ReaderPersona-${data.profile.name || 'Report'}.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+        }
+
+        // --- Interaction ---
+
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const json = JSON.parse(event.target.result);
+                    currentData = processData(json);
+                    updateUI(currentData);
+                } catch (err) {
+                    alert("Invalid JSON format.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            currentData = null;
+            document.getElementById('upload-container').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('file-input').value = '';
+        });
+
+        document.getElementById('btn-snapshot').addEventListener('click', generateSnapshot);
+
+        // Simple drag-over visual
+        const dropZone = document.getElementById('upload-container');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drop-zone-active'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drop-zone-active'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drop-zone-active'); });
+
+    </script>
+</body>
+</html>
